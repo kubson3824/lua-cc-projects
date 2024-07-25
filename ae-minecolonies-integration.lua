@@ -88,6 +88,10 @@ function drawBox(mon, x1, y1, x2, y2)
     end
 end
 
+function isdigit(c)
+    return c >= '0' and c <= '9'
+end
+
 function displayTimer(mon, t)
     local now = os.time()
 
@@ -225,7 +229,6 @@ function displayRequests(mon)
     mon.clear()
     drawMenuBar(mon)
     drawBox(mon, 1, 2, w, h)
-    displayTimer(mon, current_run)  -- Ensure timer is displayed
 
     local function displayList(title, list)
         if #list > 0 then
@@ -309,5 +312,6 @@ while true do
         elseif currentTab == "Statistics" then
             displayStatistics(monitor)
         end
+        displayTimer(monitor, current_run)  -- Ensure timer updates on touch
     end
 end

@@ -212,6 +212,11 @@ function scanWorkRequests()
     return builder_list, nonbuilder_list, equipment_list
 end
 
+function isdigit(c)
+    return c >= '0' and c <= '9'
+end
+
+
 function displayRequests(mon)
     local builder_list, nonbuilder_list, equipment_list = scanWorkRequests()
 

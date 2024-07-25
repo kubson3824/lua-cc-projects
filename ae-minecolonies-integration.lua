@@ -115,7 +115,6 @@ function displayTimer(mon, t)
     mon.setTextColor(colors.white)
     mon.setCursorPos(1, 2)
     mon.clearLine()
-    mon.setCursorPos(1, 2)
     mPrintRowJustified(mon, 2, "left", string.format("Time: %s [%s]    ", textutils.formatTime(now, false), cycle), cycle_color)
     if cycle ~= "night" then
         mPrintRowJustified(mon, 2, "right", string.format("    Remaining: %ss", t), timer_color)
@@ -123,7 +122,6 @@ function displayTimer(mon, t)
         mPrintRowJustified(mon, 2, "right", "    Remaining: PAUSED", colors.red)
     end
 end
-
 
 function scanWorkRequests()
     local builder_list = {}
@@ -219,11 +217,6 @@ function scanWorkRequests()
     return builder_list, nonbuilder_list, equipment_list
 end
 
-function isdigit(c)
-    return c >= '0' and c <= '9'
-end
-
-
 function displayRequests(mon)
     local builder_list, nonbuilder_list, equipment_list = scanWorkRequests()
 
@@ -271,7 +264,6 @@ function displayStatistics(mon)
     mPrintRowJustified(mon, row, "center", "Statistics not implemented yet.")
 end
 
-
 function handleMonitorTouch(x, y)
     local w, _ = monitor.getSize()
     if y == 1 then
@@ -317,6 +309,5 @@ while true do
         elseif currentTab == "Statistics" then
             displayStatistics(monitor)
         end
-        displayTimer(monitor, current_run)  -- Ensure timer updates on touch
     end
 end

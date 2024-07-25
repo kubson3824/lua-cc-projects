@@ -38,11 +38,34 @@ print("Colony Integrator initialized.")
 local storage = "south"
 print("Storage initialized.")
 
-local logFile = "RSWarehouse.log"
+local settings = {
+    scanInterval = 30,
+    logFile = "RSWarehouse.log"
+}
+
+function loadSettings()
+    if fs.exists("settings.cfg") then
+        local file = fs.open("settings.cfg", "r")
+        settings = textutils.unserialize(file.readAll())
+        file.close()
+    end
+end
+
+function saveSettings()
+    local file = fs.open("settings.cfg", "w")
+    file.write(textutils.serialize(settings))
+    file.close()
+end
+
+-- Load settings
+loadSettings()
+
+local logFile = settings.logFile
 
 -- Statistics data
 local requesters = {}
 local itemsRequested = {}
+local currentRequests = {} -- Store current requests for detail viewing
 
 ----------------------------------------------------------------------------
 -- FUNCTIONS
@@ -106,6 +129,7 @@ function scanWorkRequests(mon, bridgeColony, bridgeMain, storage)
     local builder_list = {}
     local nonbuilder_list = {}
     local equipment_list = {}
+    currentRequests = {} -- Clear current requests
 
     local itemsColony = bridgeColony.listItems()
     local item_array_colony = {}
@@ -193,6 +217,8 @@ function scanWorkRequests(mon, bridgeColony, bridgeMain, storage)
             local new_target = target_type .. " " .. target_name
             table.insert(nonbuilder_list, {name = name, target = new_target, needed = needed, provided = provided, color = color})
         end
+        -- Store request details for detail viewing
+        table.insert(currentRequests, request)
     end
 
     local row = 3
@@ -221,6 +247,21 @@ function scanWorkRequests(mon, bridgeColony, bridgeMain, storage)
     if row == 3 then mPrintRowJustified(mon, row, "center", "No Open Requests") end
     print("Scan completed at", textutils.formatTime(os.time(), false) .. " (" .. os.time() .. ").")
     file.close()
+end
+
+function displayRequestDetails(request)
+    local row = 3
+    monitor.clear()
+    mPrintRowJustified(monitor, row, "center", "Request Details")
+    row = row + 2
+    mPrintRowJustified(monitor, row, "left", "Item: " .. request.name)
+    row = row + 1
+    mPrintRowJustified(monitor, row, "left", "Quantity: " .. request.count)
+    row = row + 1
+    mPrintRowJustified(monitor, row, "left", "Target: " .. request.target)
+    row = row + 1
+    mPrintRowJustified(monitor, row, "left", "Description: " .. request.desc)
+    displayNavBar(monitor)
 end
 
 function displayStatistics(mon)
@@ -255,6 +296,7 @@ function displayStatistics(mon)
     end
 
     if row == 3 then mPrintRowJustified(mon, row, "center", "No Statistics Available") end
+    displayNavBar(mon)
 end
 
 function displayNavBar(mon)
@@ -264,6 +306,7 @@ function displayNavBar(mon)
     mon.setBackgroundColor(colors.gray)
     mon.clearLine()
     mPrintRowJustified(mon, barY, "left", "[Requests]", colors.white)
+    mPrintRowJustified(mon, barY, "center", "[Details]", colors.white)
     mPrintRowJustified(mon, barY, "right", "[Statistics]", colors.white)
     mon.setBackgroundColor(colors.black)
 end
@@ -272,9 +315,9 @@ end
 -- MAIN
 ----------------------------------------------------------------------------
 
-local time_between_runs = 30
+local time_between_runs = settings.scanInterval
 local current_run = time_between_runs
-local viewMode = "requests" -- "requests" or "statistics"
+local viewMode = "requests" -- "requests", "details", or "statistics"
 
 displayNavBar(monitor)
 scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
@@ -301,9 +344,16 @@ while true do
         local x, y = e[3], e[4]
         local w, h = monitor.getSize()
         if y == h then
-            if x <= w / 2 then
+            if x <= w / 3 then
                 viewMode = "requests"
                 scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
+            elseif x > w / 3 and x <= 2 * w / 3 then
+                viewMode = "details"
+                if #currentRequests > 0 then
+                    displayRequestDetails(currentRequests[1])
+                else
+                    displayNavBar(monitor)
+                end
             else
                 viewMode = "statistics"
                 displayStatistics(monitor)

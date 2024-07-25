@@ -225,6 +225,7 @@ function displayRequests(mon)
     mon.clear()
     drawMenuBar(mon)
     drawBox(mon, 1, 2, w, h)
+    displayTimer(mon, current_run)  -- Ensure timer is displayed
 
     local function displayList(title, list)
         if #list > 0 then
@@ -255,12 +256,14 @@ function displayStatistics(mon)
     mon.clear()
     drawMenuBar(mon)
     drawBox(mon, 1, 2, w, h)
+    displayTimer(mon, current_run)  -- Ensure timer is displayed
 
     mPrintRowJustified(mon, row, "center", "Statistics View")
     row = row + 1
     -- Add statistics display logic here
     mPrintRowJustified(mon, row, "center", "Statistics not implemented yet.")
 end
+
 
 function handleMonitorTouch(x, y)
     local w, _ = monitor.getSize()
@@ -278,7 +281,7 @@ end
 ----------------------------------------------------------------------------
 
 local time_between_runs = 30
-local current_run = time_between_runs
+current_run = time_between_runs  -- Make current_run global
 displayRequests(monitor)
 displayTimer(monitor, current_run)
 local TIMER = os.startTimer(1)
@@ -309,3 +312,4 @@ while true do
         end
     end
 end
+

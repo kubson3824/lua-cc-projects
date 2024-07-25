@@ -122,6 +122,10 @@ function displayTimer(mon, t)
     end
 end
 
+function scanWorkRequests()
+    -- Existing scanWorkRequests logic to be used in the main loop for updating data
+end
+
 function displayRequests(mon)
     local builder_list = {}
     local nonbuilder_list = {}
@@ -272,7 +276,8 @@ end
 
 local time_between_runs = 30
 local current_run = time_between_runs
-scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
+scanWorkRequests()
+displayRequests(monitor)
 displayTimer(monitor, current_run)
 local TIMER = os.startTimer(1)
 
@@ -283,7 +288,12 @@ while true do
         if now >= 5 and now < 19.5 then
             current_run = current_run - 1
             if current_run <= 0 then
-                scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
+                scanWorkRequests()
+                if currentTab == "Requests" then
+                    displayRequests(monitor)
+                elseif currentTab == "Statistics" then
+                    displayStatistics(monitor)
+                end
                 current_run = time_between_runs
             end
         end

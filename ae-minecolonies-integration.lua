@@ -257,39 +257,58 @@ function displayStatistics(mon)
     if row == 3 then mPrintRowJustified(mon, row, "center", "No Statistics Available") end
 end
 
+function displayMenu(mon)
+    local row = 3
+    mon.clear()
+    mPrintRowJustified(mon, row, "center", "Main Menu")
+    row = row + 2
+    mPrintRowJustified(mon, row, "center", "1. View Requests")
+    row = row + 1
+    mPrintRowJustified(mon, row, "center", "2. View Statistics")
+    row = row + 2
+    mPrintRowJustified(mon, row, "center", "Touch to select")
+end
+
 ----------------------------------------------------------------------------
 -- MAIN
 ----------------------------------------------------------------------------
 
 local time_between_runs = 30
 local current_run = time_between_runs
-local viewMode = "requests" -- "requests" or "statistics"
+local viewMode = "menu" -- "menu", "requests", or "statistics"
 
-scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
-displayTimer(monitor, current_run)
+displayMenu(monitor)
 local TIMER = os.startTimer(1)
 
 while true do
     local e = {os.pullEvent()}
     if e[1] == "timer" and e[2] == TIMER then
-        local now = os.time()
-        if now >= 5 and now < 19.5 then
-            current_run = current_run - 1
-            if current_run <= 0 then
-                scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
-                current_run = time_between_runs
+        if viewMode == "requests" then
+            local now = os.time()
+            if now >= 5 and now < 19.5 then
+                current_run = current_run - 1
+                if current_run <= 0 then
+                    scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
+                    current_run = time_between_runs
+                end
             end
+            displayTimer(monitor, current_run)
         end
-        displayTimer(monitor, current_run)
         TIMER = os.startTimer(1)
     elseif e[1] == "monitor_touch" then
         os.cancelTimer(TIMER)
-        if viewMode == "requests" then
-            viewMode = "statistics"
-            displayStatistics(monitor)
+        local x, y = e[3], e[4]
+        if viewMode == "menu" then
+            if y == 5 then
+                viewMode = "requests"
+                scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
+            elseif y == 6 then
+                viewMode = "statistics"
+                displayStatistics(monitor)
+            end
         else
-            viewMode = "requests"
-            scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
+            viewMode = "menu"
+            displayMenu(monitor)
         end
         current_run = time_between_runs
         displayTimer(monitor, current_run)

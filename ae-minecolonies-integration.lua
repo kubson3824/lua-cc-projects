@@ -59,13 +59,13 @@ function drawMenuBar(mon)
 end
 
 function mPrintRowJustified(mon, y, pos, text, ...)
-    local w, h = mon.getSize()
+    local w, _ = mon.getSize()
     local fg = mon.getTextColor()
     local bg = mon.getBackgroundColor()
 
-    local x = 1
+    local x = 2  -- Start at 2 to avoid the box
     if pos == "center" then x = math.floor((w - #text) / 2) end
-    if pos == "right" then x = w - #text end
+    if pos == "right" then x = w - #text - 1 end  -- Adjusted to avoid the box
 
     if #arg > 0 then mon.setTextColor(arg[1]) end
     if #arg > 1 then mon.setBackgroundColor(arg[2]) end
@@ -86,10 +86,6 @@ function drawBox(mon, x1, y1, x2, y2)
         mon.setCursorPos(x2, y)
         mon.write("|")
     end
-end
-
-function isdigit(c)
-    return c >= '0' and c <= '9'
 end
 
 function displayTimer(mon, t)
@@ -123,10 +119,6 @@ function displayTimer(mon, t)
 end
 
 function scanWorkRequests()
-    -- Existing scanWorkRequests logic to be used in the main loop for updating data
-end
-
-function displayRequests(mon)
     local builder_list = {}
     local nonbuilder_list = {}
     local equipment_list = {}
@@ -217,13 +209,19 @@ function displayRequests(mon)
         end
     end
 
+    return builder_list, nonbuilder_list, equipment_list
+end
+
+function displayRequests(mon)
+    local builder_list, nonbuilder_list, equipment_list = scanWorkRequests()
+
     local row = 4
     local w, h = mon.getSize()
     mon.clear()
     drawMenuBar(mon)
     drawBox(mon, 1, 2, w, h)
 
-    local function displayRequests(title, list)
+    local function displayList(title, list)
         if #list > 0 then
             mPrintRowJustified(mon, row, "center", title)
             row = row + 1
@@ -239,9 +237,9 @@ function displayRequests(mon)
         end
     end
 
-    displayRequests("Equipment", equipment_list)
-    displayRequests("Builder Requests", builder_list)
-    displayRequests("Nonbuilder Requests", nonbuilder_list)
+    displayList("Equipment", equipment_list)
+    displayList("Builder Requests", builder_list)
+    displayList("Nonbuilder Requests", nonbuilder_list)
 
     if row == 4 then mPrintRowJustified(mon, row, "center", "No Open Requests") end
 end
@@ -276,7 +274,6 @@ end
 
 local time_between_runs = 30
 local current_run = time_between_runs
-scanWorkRequests()
 displayRequests(monitor)
 displayTimer(monitor, current_run)
 local TIMER = os.startTimer(1)
@@ -288,7 +285,6 @@ while true do
         if now >= 5 and now < 19.5 then
             current_run = current_run - 1
             if current_run <= 0 then
-                scanWorkRequests()
                 if currentTab == "Requests" then
                     displayRequests(monitor)
                 elseif currentTab == "Statistics" then

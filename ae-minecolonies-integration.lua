@@ -40,6 +40,10 @@ print("Storage initialized.")
 
 local logFile = "RSWarehouse.log"
 
+-- Statistics data
+local requesters = {}
+local itemsRequested = {}
+
 ----------------------------------------------------------------------------
 -- FUNCTIONS
 ----------------------------------------------------------------------------
@@ -166,6 +170,10 @@ function scanWorkRequests(mon, bridgeColony, bridgeMain, storage)
             print("[Skipped]", nameString)
         end
 
+        -- Update statistics
+        requesters[target_name] = (requesters[target_name] or 0) + 1
+        itemsRequested[item] = (itemsRequested[item] or 0) + provided
+
         if desc:find("of class") then
             local level = "Any Level"
             if desc:find("with maximal level:Leather") then level = "Leather" end
@@ -215,12 +223,48 @@ function scanWorkRequests(mon, bridgeColony, bridgeMain, storage)
     file.close()
 end
 
+function displayStatistics(mon)
+    local row = 3
+    mon.clear()
+    
+    mPrintRowJustified(mon, row, "center", "Top Requesters")
+    row = row + 1
+    local sortedRequesters = {}
+    for requester, count in pairs(requesters) do
+        table.insert(sortedRequesters, {requester = requester, count = count})
+    end
+    table.sort(sortedRequesters, function(a, b) return a.count > b.count end)
+    for _, entry in ipairs(sortedRequesters) do
+        mPrintRowJustified(mon, row, "left", entry.requester, colors.blue)
+        mPrintRowJustified(mon, row, "right", tostring(entry.count), colors.blue)
+        row = row + 1
+    end
+
+    row = row + 1
+    mPrintRowJustified(mon, row, "center", "Top Requested Items")
+    row = row + 1
+    local sortedItems = {}
+    for item, count in pairs(itemsRequested) do
+        table.insert(sortedItems, {item = item, count = count})
+    end
+    table.sort(sortedItems, function(a, b) return a.count > b.count end)
+    for _, entry in ipairs(sortedItems) do
+        mPrintRowJustified(mon, row, "left", entry.item, colors.green)
+        mPrintRowJustified(mon, row, "right", tostring(entry.count), colors.green)
+        row = row + 1
+    end
+
+    if row == 3 then mPrintRowJustified(mon, row, "center", "No Statistics Available") end
+end
+
 ----------------------------------------------------------------------------
 -- MAIN
 ----------------------------------------------------------------------------
 
 local time_between_runs = 30
 local current_run = time_between_runs
+local viewMode = "requests" -- "requests" or "statistics"
+
 scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
 displayTimer(monitor, current_run)
 local TIMER = os.startTimer(1)
@@ -240,7 +284,13 @@ while true do
         TIMER = os.startTimer(1)
     elseif e[1] == "monitor_touch" then
         os.cancelTimer(TIMER)
-        scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
+        if viewMode == "requests" then
+            viewMode = "statistics"
+            displayStatistics(monitor)
+        else
+            viewMode = "requests"
+            scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
+        end
         current_run = time_between_runs
         displayTimer(monitor, current_run)
         TIMER = os.startTimer(1)

@@ -306,6 +306,7 @@ while true do
         displayTimer(monitor, current_run)
         TIMER = os.startTimer(1)
     elseif e[1] == "monitor_touch" then
+        os.cancelTimer(TIMER)
         handleMonitorTouch(e[3], e[4])
         if currentTab == "Requests" then
             displayRequests(monitor)
@@ -313,5 +314,6 @@ while true do
             displayStatistics(monitor)
         end
         displayTimer(monitor, current_run)  -- Ensure timer updates on touch
+        TIMER = os.startTimer(1)
     end
 end

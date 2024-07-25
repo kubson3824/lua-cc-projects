@@ -133,8 +133,8 @@ function scanWorkRequests(mon, bridgeColony, bridgeMain, storage)
             table.insert(target_words, word)
         end
 
-        local target_name = target_words[#target_words - 2] .. " " .. target_words[#target_words]
-        local target_type = table.concat(target_words, " ", 1, #target_words - 3)
+        local target_name = target_words[#target_words - 1] and (target_words[#target_words - 1] .. " " .. target_words[#target_words]) or target
+        local target_type = table.concat(target_words, " ", 1, #target_words - 2)
 
         local useRS = not (desc:find("Tool of class") or name:match("Hoe|Shovel|Axe|Pickaxe|Bow|Sword|Shield|Helmet|Leather Cap|Chestplate|Tunic|Pants|Leggings|Boots|Rallying Banner|Crafter|Compostable|Fertilizer|Flowers|Food|Fuel|Smeltable Ore|Stack List"))
 

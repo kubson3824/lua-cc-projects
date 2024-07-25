@@ -257,16 +257,15 @@ function displayStatistics(mon)
     if row == 3 then mPrintRowJustified(mon, row, "center", "No Statistics Available") end
 end
 
-function displayMenu(mon)
-    local row = 3
-    mon.clear()
-    mPrintRowJustified(mon, row, "center", "Main Menu")
-    row = row + 2
-    mPrintRowJustified(mon, row, "center", "1. View Requests")
-    row = row + 1
-    mPrintRowJustified(mon, row, "center", "2. View Statistics")
-    row = row + 2
-    mPrintRowJustified(mon, row, "center", "Touch to select")
+function displayNavBar(mon)
+    local w, h = mon.getSize()
+    local barY = h
+    mon.setCursorPos(1, barY)
+    mon.setBackgroundColor(colors.gray)
+    mon.clearLine()
+    mPrintRowJustified(mon, barY, "left", "[Requests]", colors.white)
+    mPrintRowJustified(mon, barY, "right", "[Statistics]", colors.white)
+    mon.setBackgroundColor(colors.black)
 end
 
 ----------------------------------------------------------------------------
@@ -275,9 +274,10 @@ end
 
 local time_between_runs = 30
 local current_run = time_between_runs
-local viewMode = "menu" -- "menu", "requests", or "statistics"
+local viewMode = "requests" -- "requests" or "statistics"
 
-displayMenu(monitor)
+displayNavBar(monitor)
+scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
 local TIMER = os.startTimer(1)
 
 while true do
@@ -294,24 +294,23 @@ while true do
             end
             displayTimer(monitor, current_run)
         end
+        displayNavBar(monitor)
         TIMER = os.startTimer(1)
     elseif e[1] == "monitor_touch" then
         os.cancelTimer(TIMER)
         local x, y = e[3], e[4]
-        if viewMode == "menu" then
-            if y == 5 then
+        local w, h = monitor.getSize()
+        if y == h then
+            if x <= w / 2 then
                 viewMode = "requests"
                 scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
-            elseif y == 6 then
+            else
                 viewMode = "statistics"
                 displayStatistics(monitor)
             end
-        else
-            viewMode = "menu"
-            displayMenu(monitor)
         end
+        displayNavBar(monitor)
         current_run = time_between_runs
-        displayTimer(monitor, current_run)
         TIMER = os.startTimer(1)
     end
 end

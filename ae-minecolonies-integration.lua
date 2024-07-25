@@ -110,6 +110,12 @@ function displayTimer(mon, t)
     if t < 15 then timer_color = colors.yellow end
     if t < 5 then timer_color = colors.red end
 
+    -- Clear the specific area for the timer
+    mon.setBackgroundColor(colors.black)
+    mon.setTextColor(colors.white)
+    mon.setCursorPos(1, 2)
+    mon.clearLine()
+    mon.setCursorPos(1, 2)
     mPrintRowJustified(mon, 2, "left", string.format("Time: %s [%s]    ", textutils.formatTime(now, false), cycle), cycle_color)
     if cycle ~= "night" then
         mPrintRowJustified(mon, 2, "right", string.format("    Remaining: %ss", t), timer_color)
@@ -117,6 +123,7 @@ function displayTimer(mon, t)
         mPrintRowJustified(mon, 2, "right", "    Remaining: PAUSED", colors.red)
     end
 end
+
 
 function scanWorkRequests()
     local builder_list = {}
@@ -310,6 +317,6 @@ while true do
         elseif currentTab == "Statistics" then
             displayStatistics(monitor)
         end
+        displayTimer(monitor, current_run)  -- Ensure timer updates on touch
     end
 end
-

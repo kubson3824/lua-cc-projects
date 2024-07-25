@@ -39,33 +39,19 @@ local storage = "south"
 print("Storage initialized.")
 
 local logFile = "RSWarehouse.log"
-local currentTab = "Requests"
 
 ----------------------------------------------------------------------------
 -- FUNCTIONS
 ----------------------------------------------------------------------------
 
-function drawMenuBar(mon)
-    local w, _ = mon.getSize()
-    mon.setCursorPos(1, 1)
-    mon.setBackgroundColor(colors.gray)
-    mon.setTextColor(colors.white)
-    mon.clearLine()
-    mon.write(" Requests ")
-    mon.setCursorPos(w - 10, 1)
-    mon.write(" Statistics ")
-    mon.setBackgroundColor(colors.black)
-    mon.setTextColor(colors.white)
-end
-
 function mPrintRowJustified(mon, y, pos, text, ...)
-    local w, _ = mon.getSize()
+    local w, h = mon.getSize()
     local fg = mon.getTextColor()
     local bg = mon.getBackgroundColor()
 
-    local x = 2  -- Start at 2 to avoid the box
+    local x = 1
     if pos == "center" then x = math.floor((w - #text) / 2) end
-    if pos == "right" then x = w - #text - 1 end  -- Adjusted to avoid the box
+    if pos == "right" then x = w - #text end
 
     if #arg > 0 then mon.setTextColor(arg[1]) end
     if #arg > 1 then mon.setBackgroundColor(arg[2]) end
@@ -73,19 +59,6 @@ function mPrintRowJustified(mon, y, pos, text, ...)
     mon.write(text)
     mon.setTextColor(fg)
     mon.setBackgroundColor(bg)
-end
-
-function drawBox(mon, x1, y1, x2, y2)
-    mon.setCursorPos(x1, y1)
-    mon.write(string.rep("-", x2 - x1 + 1))
-    mon.setCursorPos(x1, y2)
-    mon.write(string.rep("-", x2 - x1 + 1))
-    for y = y1 + 1, y2 - 1 do
-        mon.setCursorPos(x1, y)
-        mon.write("|")
-        mon.setCursorPos(x2, y)
-        mon.write("|")
-    end
 end
 
 function isdigit(c)
@@ -114,20 +87,18 @@ function displayTimer(mon, t)
     if t < 15 then timer_color = colors.yellow end
     if t < 5 then timer_color = colors.red end
 
-    -- Clear the specific area for the timer
-    mon.setBackgroundColor(colors.black)
-    mon.setTextColor(colors.white)
-    mon.setCursorPos(1, 2)
-    mon.clearLine()
-    mPrintRowJustified(mon, 2, "left", string.format("Time: %s [%s]    ", textutils.formatTime(now, false), cycle), cycle_color)
+    mPrintRowJustified(mon, 1, "left", string.format("Time: %s [%s]    ", textutils.formatTime(now, false), cycle), cycle_color)
     if cycle ~= "night" then
-        mPrintRowJustified(mon, 2, "right", string.format("    Remaining: %ss", t), timer_color)
+        mPrintRowJustified(mon, 1, "right", string.format("    Remaining: %ss", t), timer_color)
     else
-        mPrintRowJustified(mon, 2, "right", "    Remaining: PAUSED", colors.red)
+        mPrintRowJustified(mon, 1, "right", "    Remaining: PAUSED", colors.red)
     end
 end
 
-function scanWorkRequests()
+function scanWorkRequests(mon, bridgeColony, bridgeMain, storage)
+    local file = fs.open(logFile, "w")
+    print("\nScan starting at", textutils.formatTime(os.time(), false) .. " (" .. os.time() .. ").")
+
     local builder_list = {}
     local nonbuilder_list = {}
     local equipment_list = {}
@@ -162,8 +133,8 @@ function scanWorkRequests()
             table.insert(target_words, word)
         end
 
-        local target_name = target_words[#target_words - 2] and (target_words[#target_words - 2] .. " " .. target_words[#target_words]) or target
-        local target_type = table.concat(target_words, " ", 1, #target_words - 3) or ""
+        local target_name = target_words[#target_words - 2] .. " " .. target_words[#target_words]
+        local target_type = table.concat(target_words, " ", 1, #target_words - 3)
 
         local useRS = not (desc:find("Tool of class") or name:match("Hoe|Shovel|Axe|Pickaxe|Bow|Sword|Shield|Helmet|Leather Cap|Chestplate|Tunic|Pants|Leggings|Boots|Rallying Banner|Crafter|Compostable|Fertilizer|Flowers|Food|Fuel|Smeltable Ore|Stack List"))
 
@@ -172,9 +143,7 @@ function scanWorkRequests()
             if item_array_colony[item] then
                 provided = bridgeColony.exportItem({name = item, count = needed}, storage)
             elseif item_array_main[item] then
-                local exportCount = math.min(needed - provided, item_array_main[item])
-                provided = provided + bridgeMain.exportItem({name = item, count = exportCount}, storage)
-                bridgeColony.importItem({name = item, count = exportCount}, storage)
+                provided = bridgeMain.exportItem({name = item, count = needed}, storage)
             end
 
             color = colors.green
@@ -218,19 +187,10 @@ function scanWorkRequests()
         end
     end
 
-    return builder_list, nonbuilder_list, equipment_list
-end
-
-function displayRequests(mon)
-    local builder_list, nonbuilder_list, equipment_list = scanWorkRequests()
-
-    local row = 4
-    local w, h = mon.getSize()
+    local row = 3
     mon.clear()
-    drawMenuBar(mon)
-    drawBox(mon, 1, 2, w, h)
 
-    local function displayList(title, list)
+    local function displayRequests(title, list)
         if #list > 0 then
             mPrintRowJustified(mon, row, "center", title)
             row = row + 1
@@ -246,36 +206,13 @@ function displayRequests(mon)
         end
     end
 
-    displayList("Equipment", equipment_list)
-    displayList("Builder Requests", builder_list)
-    displayList("Nonbuilder Requests", nonbuilder_list)
+    displayRequests("Equipment", equipment_list)
+    displayRequests("Builder Requests", builder_list)
+    displayRequests("Nonbuilder Requests", nonbuilder_list)
 
-    if row == 4 then mPrintRowJustified(mon, row, "center", "No Open Requests") end
-end
-
-function displayStatistics(mon)
-    local row = 4
-    local w, h = mon.getSize()
-    mon.clear()
-    drawMenuBar(mon)
-    drawBox(mon, 1, 2, w, h)
-    displayTimer(mon, current_run)  -- Ensure timer is displayed
-
-    mPrintRowJustified(mon, row, "center", "Statistics View")
-    row = row + 1
-    -- Add statistics display logic here
-    mPrintRowJustified(mon, row, "center", "Statistics not implemented yet.")
-end
-
-function handleMonitorTouch(x, y)
-    local w, _ = monitor.getSize()
-    if y == 1 then
-        if x <= 10 then
-            currentTab = "Requests"
-        elseif x >= w - 10 then
-            currentTab = "Statistics"
-        end
-    end
+    if row == 3 then mPrintRowJustified(mon, row, "center", "No Open Requests") end
+    print("Scan completed at", textutils.formatTime(os.time(), false) .. " (" .. os.time() .. ").")
+    file.close()
 end
 
 ----------------------------------------------------------------------------
@@ -283,8 +220,8 @@ end
 ----------------------------------------------------------------------------
 
 local time_between_runs = 30
-current_run = time_between_runs  -- Make current_run global
-displayRequests(monitor)
+local current_run = time_between_runs
+scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
 displayTimer(monitor, current_run)
 local TIMER = os.startTimer(1)
 
@@ -295,11 +232,7 @@ while true do
         if now >= 5 and now < 19.5 then
             current_run = current_run - 1
             if current_run <= 0 then
-                if currentTab == "Requests" then
-                    displayRequests(monitor)
-                elseif currentTab == "Statistics" then
-                    displayStatistics(monitor)
-                end
+                scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
                 current_run = time_between_runs
             end
         end
@@ -307,13 +240,9 @@ while true do
         TIMER = os.startTimer(1)
     elseif e[1] == "monitor_touch" then
         os.cancelTimer(TIMER)
-        handleMonitorTouch(e[3], e[4])
-        if currentTab == "Requests" then
-            displayRequests(monitor)
-        elseif currentTab == "Statistics" then
-            displayStatistics(monitor)
-        end
-        displayTimer(monitor, current_run)  -- Ensure timer updates on touch
+        scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
+        current_run = time_between_runs
+        displayTimer(monitor, current_run)
         TIMER = os.startTimer(1)
     end
 end

@@ -92,12 +92,6 @@ function isdigit(c)
     return c >= '0' and c <= '9'
 end
 
-function logMessage(message)
-    local file = fs.open("activity.log", "a")
-    file.writeLine(os.date("%Y-%m-%d %H:%M:%S") .. " - " .. message)
-    file.close()
-end
-
 function displayTimer(mon, t)
     local now = os.time()
 
@@ -131,7 +125,6 @@ end
 function scanWorkRequests(mon, bridgeColony, bridgeMain, storage)
     local file = fs.open(logFile, "w")
     print("\nScan starting at", textutils.formatTime(os.time(), false) .. " (" .. os.time() .. ").")
-    logMessage("Scan started")
 
     local builder_list = {}
     local nonbuilder_list = {}
@@ -186,23 +179,19 @@ function scanWorkRequests(mon, bridgeColony, bridgeMain, storage)
                 if bridgeColony.isItemCrafting({name = item}) or bridgeMain.isItemCrafting({name = item}) then
                     color = colors.yellow
                     print("[Crafting]", item)
-                    logMessage("[Crafting] " .. item)
                 else
                     if bridgeColony.craftItem({name = item, count = needed}) or bridgeMain.craftItem({name = item, count = needed}) then
                         color = colors.yellow
                         print("[Scheduled]", needed, "x", item)
-                        logMessage("[Scheduled] " .. needed .. "x " .. item)
                     else
                         color = colors.red
                         print("[Failed to Craft]", item)
-                        logMessage("[Failed to Craft] " .. item)
                     end
                 end
             end
         else
             local nameString = name .. " [" .. target .. "]"
             print("[Skipped]", nameString)
-            logMessage("[Skipped] " .. nameString)
         end
 
         -- Update statistics
@@ -237,7 +226,7 @@ function scanWorkRequests(mon, bridgeColony, bridgeMain, storage)
 
     local function displayRequests(title, list)
         if #list > 0 then
-            mPrintRowJustified(mon, row, "center", title, colors.cyan)
+            mPrintRowJustified(mon, row, "center", title)
             row = row + 1
             for _, entry in ipairs(list) do
                 local text = string.format("%d %s", entry.needed, entry.name)
@@ -255,24 +244,23 @@ function scanWorkRequests(mon, bridgeColony, bridgeMain, storage)
     displayRequests("Builder Requests", builder_list)
     displayRequests("Nonbuilder Requests", nonbuilder_list)
 
-    if row == 3 then mPrintRowJustified(mon, row, "center", "No Open Requests", colors.red) end
+    if row == 3 then mPrintRowJustified(mon, row, "center", "No Open Requests") end
     print("Scan completed at", textutils.formatTime(os.time(), false) .. " (" .. os.time() .. ").")
-    logMessage("Scan completed")
     file.close()
 end
 
 function displayRequestDetails(request)
     local row = 3
     monitor.clear()
-    mPrintRowJustified(monitor, row, "center", "Request Details", colors.cyan)
+    mPrintRowJustified(monitor, row, "center", "Request Details")
     row = row + 2
-    mPrintRowJustified(monitor, row, "left", "Item: " .. request.name, colors.lightBlue)
+    mPrintRowJustified(monitor, row, "left", "Item: " .. request.name)
     row = row + 1
-    mPrintRowJustified(monitor, row, "left", "Quantity: " .. request.count, colors.lightBlue)
+    mPrintRowJustified(monitor, row, "left", "Quantity: " .. request.count)
     row = row + 1
-    mPrintRowJustified(monitor, row, "left", "Target: " .. request.target, colors.lightBlue)
+    mPrintRowJustified(monitor, row, "left", "Target: " .. request.target)
     row = row + 1
-    mPrintRowJustified(monitor, row, "left", "Description: " .. request.desc, colors.lightBlue)
+    mPrintRowJustified(monitor, row, "left", "Description: " .. request.desc)
     displayNavBar(monitor)
 end
 
@@ -280,7 +268,7 @@ function displayStatistics(mon)
     local row = 3
     mon.clear()
     
-    mPrintRowJustified(mon, row, "center", "Top Requesters", colors.cyan)
+    mPrintRowJustified(mon, row, "center", "Top Requesters")
     row = row + 1
     local sortedRequesters = {}
     for requester, count in pairs(requesters) do
@@ -294,7 +282,7 @@ function displayStatistics(mon)
     end
 
     row = row + 1
-    mPrintRowJustified(mon, row, "center", "Top Requested Items", colors.cyan)
+    mPrintRowJustified(mon, row, "center", "Top Requested Items")
     row = row + 1
     local sortedItems = {}
     for item, count in pairs(itemsRequested) do
@@ -307,7 +295,7 @@ function displayStatistics(mon)
         row = row + 1
     end
 
-    if row == 3 then mPrintRowJustified(mon, row, "center", "No Statistics Available", colors.red) end
+    if row == 3 then mPrintRowJustified(mon, row, "center", "No Statistics Available") end
     displayNavBar(mon)
 end
 
@@ -317,9 +305,9 @@ function displayNavBar(mon)
     mon.setCursorPos(1, barY)
     mon.setBackgroundColor(colors.gray)
     mon.clearLine()
-    mPrintRowJustified(mon, barY, "left", "[Requests]", colors.white, colors.gray)
-    mPrintRowJustified(mon, barY, "center", "[Details]", colors.white, colors.gray)
-    mPrintRowJustified(mon, barY, "right", "[Statistics]", colors.white, colors.gray)
+    mPrintRowJustified(mon, barY, "left", "[Requests]", colors.white)
+    mPrintRowJustified(mon, barY, "center", "[Details]", colors.white)
+    mPrintRowJustified(mon, barY, "right", "[Statistics]", colors.white)
     mon.setBackgroundColor(colors.black)
 end
 
@@ -361,9 +349,8 @@ while true do
                 scanWorkRequests(monitor, bridgeColony, bridgeMain, storage)
             elseif x > w / 3 and x <= 2 * w / 3 then
                 viewMode = "details"
-                local selectedRequestIndex = math.floor((y - 3) / 2) + 1
-                if currentRequests[selectedRequestIndex] then
-                    displayRequestDetails(currentRequests[selectedRequestIndex])
+                if #currentRequests > 0 then
+                    displayRequestDetails(currentRequests[1])
                 else
                     displayNavBar(monitor)
                 end
